@@ -1,1 +1,1 @@
-# Sublime-Text-Plugin-D365-Web-Resources
+# Sublime Text Plugin D365 Web Resources
