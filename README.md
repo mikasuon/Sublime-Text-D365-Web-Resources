@@ -1,1 +1,1 @@
-# Sublime Text plugin for D365 Web resources
+# Sublime Text D365 Web Resources Manager
