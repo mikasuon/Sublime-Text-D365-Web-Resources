@@ -1,0 +1,8 @@
+D365 Web Resources 1.0.0 Changelog:
+
+New Features:
+	* Creates local files from Dynamics D365 Web Resources. Support for file hierarchies when a Web Resource have been named eg. "prefix_/project name/file name.js".
+	* Uses Microsoft ADAL libraries. Supports Multi-factor Authentication (MFA). No passwords ever saved to config files.
+	* Can connect to multiple organizations at the same time. Source code can be easily sharen between organizations.
+	* Automatic file backups when uploading Web Resources.
+	* Automatic version conflict detection. User will be warned if a Web Resource have been modified since the last time Web Resources were downloaded (of course local/server backups will be taken if user makes a wrong decision).
