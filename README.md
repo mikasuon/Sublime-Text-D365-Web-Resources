@@ -9,4 +9,4 @@ Features:
   * Uses Microsoft ADAL libraries. Supports Multi-factor Authentication (MFA). No passwords ever saved to config files.
   * Can connect to multiple organizations at the same time. Source code can be easily copy/pasted between organizations.
   * Automatic file backups when uploading Web Resources.
-  * Automatic version conflict detection. User will be warned if a Web Resource have been modified since the last time Web Resources were downloaded (of course local/server backups will be taken if user makes a wrong decision).
+  * Automatic version conflict detection. User will be warned if a Web Resource have been modified since last time Web Resources were downloaded (of course local/server backups will be taken if user makes a wrong decision).
