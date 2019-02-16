@@ -1,0 +1,15 @@
+[
+	{ "caption": "-" },
+	{
+		"caption": "D365 Web Resources",
+	    "children": [
+	    	{ "caption" : "Upload Web Resources", "command" : "upload_web_resource_side_bar", "args": {"files": []} },
+	    	{ "caption" : "Download Web Resources", "command" : "download_web_resources_side_bar", "args": {"dirs": []} },
+	    	{ "caption" : "Retrieve CRM Solutions", "command" : "retrieve_solutions_side_bar", "args": {"dirs": []} },
+	    	{ "caption": "-" },
+	    	{ "caption" : "Retrieve Tenant ID", "command" : "retrieve_tenant_id_side_bar", "args": {"dirs": []} },
+	    	{ "caption": "-" },
+	    	{ "caption" : "Create/Update Settings File", "command" : "create_settings_file_side_bar", "args": {"dirs": []} }
+		]
+	}
+]

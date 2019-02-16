@@ -1,0 +1,8 @@
+[
+{
+    "caption" : "D365 Web Resources",
+    "children": [
+    	{ "caption" : "Upload Web Resource", "command" : "upload_web_resource_context" }
+	]
+}
+]

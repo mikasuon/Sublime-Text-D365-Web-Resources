@@ -1,0 +1,3 @@
+[
+	{ "keys": ["ctrl+s"], "command": "upload_web_resource_context" }
+]
