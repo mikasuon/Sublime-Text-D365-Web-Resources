@@ -610,6 +610,9 @@ class UploadWebResourceContextCommand(sublime_plugin.TextCommand):
 		settingsFile = FindSettingsFile(fileName)
 		SolutionSettings.settings_path = settingsFile['path']
 
+		# Autosave
+		self.view.window().active_view().run_command('save')
+
 		Run('UploadWebResource')
 	def is_visible(self):
 		settingsFile = FindSettingsFile(self.view.file_name())
