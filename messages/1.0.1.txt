@@ -1,0 +1,6 @@
+D365 Web Resources 1.0.1 Changelog:
+
+New Features:
+	* Added shortcut support (Ctrl+u) to upload a file to server.
+	* Autosave on file upload.
+	* Added UTF-8 support for settings files.

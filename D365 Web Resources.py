@@ -4,7 +4,6 @@ import requests
 import json
 import adal
 import webbrowser
-import threading
 import base64
 import os
 import datetime
@@ -375,7 +374,7 @@ def FindSettingsFile(param_path = '', search_max_levels = 10):
 
 def LoadSolutionSettings(ignoreNotFound = False):
 	try:
-		with open(SolutionSettings.settings_path + '/' + SolutionSettings.settings_filename, 'r') as f:
+		with open(SolutionSettings.settings_path + '/' + SolutionSettings.settings_filename, 'r', encoding='utf-8') as f:
 			return json.load(f)
 	except Exception as error:
 		if(ignoreNotFound == False):
@@ -385,7 +384,7 @@ def LoadSolutionSettings(ignoreNotFound = False):
 	return None
 
 def SaveSolutionSettings(data):
-	with open(SolutionSettings.settings_path + '/' + SolutionSettings.settings_filename, 'w') as f:
+	with open(SolutionSettings.settings_path + '/' + SolutionSettings.settings_filename, 'w', encoding='utf-8') as f:
 	    json.dump(data, f, sort_keys=True, indent = 4)
 
 def RetrieveTenantId():
@@ -548,8 +547,6 @@ class UploadWebResourceSideBarCommand(sublime_plugin.WindowCommand):
 		settingsFile = FindSettingsFile(files[0])
 		SolutionSettings.settings_path = settingsFile['path']
 		SolutionSettings.settings_level = settingsFile['level']
-		#if(SolutionSettings.loaded == False):
-		#	LoadSettings()
 		if(SolutionSettings.settings_level >= 2):
 			return True
 		return False
@@ -578,8 +575,6 @@ class RetrieveSolutionsSideBarCommand(sublime_plugin.WindowCommand):
 		settingsFile = FindSettingsFile(dirs[0])
 		SolutionSettings.settings_path = settingsFile['path']
 		SolutionSettings.settings_level = settingsFile['level']
-		#if(SolutionSettings.loaded == False):
-		#	LoadSettings()
 		if(SolutionSettings.settings_level == 0):
 			return True
 		return False
@@ -594,22 +589,32 @@ class DownloadWebResourcesSideBarCommand(sublime_plugin.WindowCommand):
 		settingsFile = FindSettingsFile(dirs[0])
 		SolutionSettings.settings_path = settingsFile['path']
 		SolutionSettings.settings_level = settingsFile['level']
-		#if(SolutionSettings.loaded == False):
-		#	LoadSettings()
 		if(SolutionSettings.settings_level == 1):
 			return True
 		return False
 
 class UploadWebResourceContextCommand(sublime_plugin.TextCommand):
 	def run(self, edit):
-		SolutionSettings.selected_path = self.view.file_name()
+		# If window is not active on keymap
+		if(self.view.file_name() == None):
+			fileName = self.view.window().active_view().file_name()
+		else:
+			fileName = self.view.file_name()
+
+		if(fileName == None):
+			message = 'No file have been chosen.\n\nPlease choose a file to be uploaded.'
+			sublime.message_dialog(message)
+			raise Exception(message)
+
+		SolutionSettings.selected_path = fileName
+		settingsFile = FindSettingsFile(fileName)
+		SolutionSettings.settings_path = settingsFile['path']
+
 		Run('UploadWebResource')
 	def is_visible(self):
 		settingsFile = FindSettingsFile(self.view.file_name())
 		SolutionSettings.settings_path = settingsFile['path']
 		SolutionSettings.settings_level = settingsFile['level']
-		#if(SolutionSettings.loaded == False):
-		#	LoadSettings()
 		if(SolutionSettings.settings_level >= 2):
 			return True
 		return False
