@@ -50,6 +50,39 @@ def RetrieveSolutions():
 	elif(query_results.status_code != 200):
 		return
 
+	results = query_results.json()
+
+	solutions = []
+	for idx, item in enumerate(results['value']):
+		unique_name = item['uniquename']
+		friendly_name = item['friendlyname']
+		solution_id = item['solutionid']
+		solutions.append(friendly_name)
+
+	sublime.active_window().show_quick_panel(solutions, RetrieveSolutionIndex, sublime.MONOSPACE_FONT)
+	return
+
+def RetrieveSolutionIndex(index):
+	if(index == -1):
+		return
+
+	query = ''
+	if(SolutionSettings.retrieve_managed_solutions == True):
+		query = '/solutions?$filter=ismanaged eq true and isvisible eq true'
+	else:
+		query = '/solutions?$filter=ismanaged eq false and isvisible eq true'
+	query_results = requests.get(SolutionSettings.web_api_url + query, headers = SolutionSettings.request_headers)
+
+	if(SolutionSettings.debug == True):
+		pprint(vars(query_results))
+
+	if(query_results.status_code == 401):
+		CreateRequestHeaders(CreateToken())
+		RetrieveSolutions()
+		return
+	elif(query_results.status_code != 200):
+		return
+
 	try:
 		results = query_results.json()
 		if(SolutionSettings.debug == True):
@@ -57,6 +90,9 @@ def RetrieveSolutions():
 
 		print('Solution folders created/updated:')
 		for idx, item in enumerate(results['value']):
+			if(idx != index):
+				continue
+
 			unique_name = item['uniquename']
 			friendly_name = item['friendlyname']
 			solution_id = item['solutionid']
@@ -69,6 +105,9 @@ def RetrieveSolutions():
 			SolutionSettings.solution_id = solution_id
 			SolutionSettings.json['temporary_data']['solution_id'] = solution_id
 			SaveSolutionSettings(SolutionSettings.json)
+
+			SolutionSettings.selected_path = SolutionSettings.selected_path + '/' + unique_name
+			DownloadWebResources()
 
 	except Exception as error:
 		message = 'Error - Could not retrieve solutions: ' + repr(error)
@@ -153,7 +192,7 @@ def UploadWebResource():
 			pprint(vars(query_results))
 
 		date_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-		print('File uploaded to server: ' + date_time)
+		print('Web Resource Saved: ' + date_time)
 
 		parameters = {
 			"ParameterXml": "<importexportxml>\
@@ -169,7 +208,7 @@ def UploadWebResource():
 			pprint(vars(post_request))
 
 		date_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-		print('File published: ' + date_time)
+		print('Web Resource Published: ' + date_time)
 
 		server_webresource_info = GetWebResourceById(webresource_id)
 		if(server_webresource_info == False):
@@ -179,6 +218,9 @@ def UploadWebResource():
 
 		SolutionSettings.json['temporary_data']['files'][path_info['name']]['webresource_idunique'] = server_webresource_info['webresourceidunique']
 		SaveSolutionSettings(SolutionSettings.json)
+
+		date_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+		sublime.active_window().status_message('Web Resource saved and published: ' +  date_time)
 
 	except Exception as error:
 		message = 'Error - An error occurred while uploading Web Resource: ' + repr(error)
@@ -216,7 +258,7 @@ def GetWebResourceById(webresource_id):
 			return item
 
 	except Exception as error:
-		message = 'Error - Could not retrieve web resource: ' + repr(error)
+		message = 'Error - Could not retrieve Web Resource: ' + repr(error)
 		sublime.message_dialog(message)
 		raise Exception(message)
 
@@ -282,6 +324,9 @@ def DownloadWebResources():
 			SolutionSettings.json['temporary_data']['files'][solution_name + '/' + file_name]['webresource_id'] = webresource_id
 			SolutionSettings.json['temporary_data']['files'][solution_name + '/' + file_name]['webresource_idunique'] = webresource_idunique
 		SaveSolutionSettings(SolutionSettings.json)
+
+		date_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+		sublime.active_window().status_message('Web Resources downloaded from server: ' +  date_time)
 
 	except Exception as error:
 		message = 'Error - Could not download web resources: ' + repr(error)
@@ -614,6 +659,7 @@ class UploadWebResourceContextCommand(sublime_plugin.TextCommand):
 		self.view.window().active_view().run_command('save')
 
 		Run('UploadWebResource')
+
 	def is_visible(self):
 		settingsFile = FindSettingsFile(self.view.file_name())
 		SolutionSettings.settings_path = settingsFile['path']
@@ -628,3 +674,10 @@ class RetrieveTenantIdSideBarCommand(sublime_plugin.WindowCommand):
 		Run('RetrieveTenantId')
 	def is_visible(self):
 		return False
+
+#self.view.window().show_quick_panel(['messages', 'messages2'], self.on_done1, sublime.MONOSPACE_FONT)
+
+#self.view.window().show_input_panel("Please enter the directory name:", "something", self.on_done1, None, None)
+
+#self.view.window().status_message('Sent to server')
+
