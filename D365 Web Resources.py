@@ -29,6 +29,7 @@ class SolutionSettings:
 	settings_level = 0
 	solution_id = ''
 	retrieve_managed_solutions = False
+	retrieve_web_resource_types = ''
 	auto_open_browser_login = True
 	file_backup_folder = ''
 
@@ -145,7 +146,7 @@ def UploadWebResource():
 		try:
 			if(SolutionSettings.file_backup_folder != ''):
 				file_content_server = base64.b64decode(server_webresource_info['content']).decode('utf-8', 'ignore')
-				file_content_local = open(SolutionSettings.selected_path, 'r').read()
+				file_content_local = open(SolutionSettings.selected_path, 'r', encoding='utf-8').read()
 				date_time = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
 				file_name = server_webresource_info['name']
 				if '/' in file_name:
@@ -170,7 +171,7 @@ def UploadWebResource():
 
 		url = SolutionSettings.web_api_url + '/webresourceset(' + webresource_id + ')'
 
-		file_content = open(SolutionSettings.selected_path, 'r')
+		file_content = open(SolutionSettings.selected_path, 'r', encoding='utf-8')
 		content_encoded = base64.b64encode(bytes(file_content.read(), 'utf-8')).decode('utf-8')
 		if(SolutionSettings.debug == True):
 			print(content_encoded)
@@ -267,6 +268,14 @@ def GetWebResourceById(webresource_id):
 
 def DownloadWebResources():
 	solution_name = os.path.basename(SolutionSettings.selected_path)
+
+	web_resource_types = ''
+	if(SolutionSettings.retrieve_web_resource_types != ''):
+		arr = SolutionSettings.retrieve_web_resource_types.split(',')
+		for item in arr:
+			if item.isdigit():
+				web_resource_types = web_resource_types + '<condition attribute="webresourcetype" operator="eq" value="' + item + '" />'
+
 	query = '/webresourceset?fetchXml=\
 		<fetch mapping="logical" count="500" version="1.0">\
 			<entity name="webresource">\
@@ -275,10 +284,7 @@ def DownloadWebResources():
 				<attribute name="content" />\
 				<attribute name="webresourceidunique" />\
 				<filter type="or">\
-					<condition attribute="webresourcetype" operator="eq" value="1" />\
-					<condition attribute="webresourcetype" operator="eq" value="2" />\
-					<condition attribute="webresourcetype" operator="eq" value="3" />\
-					<condition attribute="webresourcetype" operator="eq" value="4" />\
+					' + web_resource_types + '\
 				</filter>\
 				<link-entity name="solutioncomponent" from="objectid" to="webresourceid">\
 					<filter>\
@@ -468,6 +474,7 @@ def LoadSettings():
 
 	# Preferences
 	SolutionSettings.retrieve_managed_solutions = RetrieveSolutionSettings('preferences', 'retrieve_managed_solutions')
+	SolutionSettings.retrieve_web_resource_types = RetrieveSolutionSettings('preferences', 'retrieve_web_resource_types')
 	SolutionSettings.file_backup_folder = RetrieveSolutionSettings('preferences', 'file_backup_folder').strip('\\').strip('/')
 	SolutionSettings.auto_open_browser_login = RetrieveSolutionSettings('preferences', 'auto_open_browser_login')
 
@@ -520,6 +527,8 @@ def CreateSettingsFile(path = ''):
 		SolutionSettings.json['preferences']['file_backup_folder'] = ''
 	if(RetrieveSolutionSettings('preferences', 'retrieve_managed_solutions', False) == None):
 		SolutionSettings.json['preferences']['retrieve_managed_solutions'] = False
+	if(RetrieveSolutionSettings('preferences', 'retrieve_web_resource_types', False) == None):
+		SolutionSettings.json['preferences']['retrieve_web_resource_types'] = '1,2,3,4,9,11,12'
 	if(RetrieveSolutionSettings('temporary_data', None, False) == None):
 		SolutionSettings.json['temporary_data'] = {}
 	if(RetrieveSolutionSettings('temporary_data', 'files', False) == None):

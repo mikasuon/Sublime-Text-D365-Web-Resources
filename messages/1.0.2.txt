@@ -1,0 +1,7 @@
+D365 Web Resources 1.0.2 Changelog:
+
+New Features:
+	* Added support for Web Resource Types in settings file.
+	
+Bugfixes:
+	* Fixed UTF-8 compability on file upload
