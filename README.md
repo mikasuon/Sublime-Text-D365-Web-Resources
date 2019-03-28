@@ -10,4 +10,4 @@ Features:
   * Uses Microsoft Azure Active Directory ADAL libraries (https://github.com/AzureAD/azure-activedirectory-library-for-python). Supports Multi-factor Authentication (MFA). No passwords ever saved to config files!
   * It is possible to connect to multiple organizations at the same time. Source code can be easily copy/pasted between organizations.
   * Automatic file backups when uploading Web Resources.
-  * Automatic version conflict detection. User will be warned if a Web Resource have been modified since Web Resources were downloaded last time (of course local and server backups will be taken if user makes a wrong decision).
+  * Automatic version conflict detection. User will be warned if a Web Resource have been modified on the server (of course local and server backups will be taken if user makes a wrong decision).
