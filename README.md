@@ -2,7 +2,7 @@
 
 Sublime Text D365 Web Resources was driven by the need to improve productivity of Dynamics 365 Web Resources.
 
-This Sublime Text plugin was built with speed and security in mind, the main aspect was to be able to edit Dynamics 365 Web Resources with a fast and feature packed text editor (Sublime Text 3.X).
+This Sublime Text plugin was built with productivity and security in mind, the main goal was to be able to edit Dynamics 365 Web Resources with a fast and feature packed text editor (Sublime Text 3.X).
 
 Features:
   * Download Web Resources as local files. Supports file hierarchies when a Web Resource have been named e.g. "prefix_/project/filename.js".
