@@ -1,0 +1,4 @@
+D365 Web Resources 1.0.3 Changelog:
+
+New Features:
+	* It's now possible to upload new files as web resources. Supported file types: html, css, js, xml, svg, resx
