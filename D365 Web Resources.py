@@ -27,7 +27,6 @@ class SolutionSettings:
 	selected_path = ''
 	settings_path = ''
 	settings_level = 0
-	solution_id = ''
 	retrieve_managed_solutions = False
 	retrieve_web_resource_types = ''
 	auto_open_browser_login = True
@@ -60,6 +59,7 @@ def RetrieveSolutions():
 		solution_id = item['solutionid']
 		solutions.append(friendly_name)
 
+	# Open dialog
 	sublime.active_window().show_quick_panel(solutions, RetrieveSolutionIndex, sublime.MONOSPACE_FONT)
 	return
 
@@ -103,8 +103,10 @@ def RetrieveSolutionIndex(index):
 				print('Make dir: ' + os.path.dirname(SolutionSettings.settings_path + '/' + unique_name + '/'))
 			os.makedirs(os.path.dirname(SolutionSettings.settings_path + '/' + unique_name + '/'), exist_ok=True)
 
-			SolutionSettings.solution_id = solution_id
-			SolutionSettings.json['temporary_data']['solution_id'] = solution_id
+			SolutionSettings.json['webresource_data']['solutions'][unique_name] = {}
+			SolutionSettings.json['webresource_data']['solutions'][unique_name]['solutionid'] = solution_id
+			SolutionSettings.json['webresource_data']['solutions'][unique_name]['friendlyname'] = friendly_name
+
 			SaveSolutionSettings(SolutionSettings.json)
 
 			SolutionSettings.selected_path = SolutionSettings.selected_path + '/' + unique_name
@@ -115,7 +117,6 @@ def RetrieveSolutionIndex(index):
 		sublime.message_dialog(message)
 		raise Exception(message)
 
-
 def UploadWebResource():
 	try:
 		path_info = DirectoryPathToFilename(SolutionSettings.selected_path)
@@ -123,18 +124,126 @@ def UploadWebResource():
 		if(SolutionSettings.debug == True):
 			print(path_info)
 
-		if(path_info['name'] == ''):
-			message = 'Error - Could not upload file, file configuration not found, is this a new file?'
-			sublime.message_dialog(message)
-			return
+		if not path_info['name'] in SolutionSettings.json['webresource_data']['files']:
+			message = 'This is a new file.\n\nWould you like to create this as a new Web Resource to current solution?'
+			ret = sublime.ok_cancel_dialog(message)
+			if not ret:
+				return
+			else:
+				# Upload file to server as a Web Resource
+				solution_name = path_info['name'].split('/')[0]
+				file_name = path_info['name'][len(solution_name)+1:]
+				solution_path = FindSettingsFile(SolutionSettings.selected_path)['path'] + '/' + solution_name
 
-		if not path_info['name'] in SolutionSettings.json['temporary_data']['files']:
-			message = 'Error - Could not upload file, web resource not found, is this a new file?'
-			sublime.message_dialog(message)
-			return
+				try:
+					solution_id = SolutionSettings.json['webresource_data']['solutions'][solution_name]['solutionid']
+					if(solution_id == '' or len(solution_id) != 36):
+						raise Exception('')
+				except Exception as error:
+					message = 'Error - Could not find solution "' + solution_name + '" from settings file.'
+					sublime.message_dialog(message)
+					return
 
-		webresource_id = SolutionSettings.json['temporary_data']['files'][path_info['name']]['webresource_id']
-		webresource_idunique = SolutionSettings.json['temporary_data']['files'][path_info['name']]['webresource_idunique']
+				url = SolutionSettings.web_api_url + '/webresourceset'
+
+				file_content = open(SolutionSettings.selected_path, 'r', encoding='utf-8')
+				content_encoded = base64.b64encode(bytes(file_content.read(), 'utf-8')).decode('utf-8')
+
+				webresource_type = None
+				if(file_name[-5:] == '.html'):
+					webresource_type = 1
+				elif(file_name[-4:] == '.css'):
+					webresource_type = 2
+				elif(file_name[-3:] == '.js'):
+					webresource_type = 3
+				elif(file_name[-4:] == '.xml'):
+					webresource_type = 4
+				elif(file_name[-4:] == '.svg'):
+					webresource_type = 11
+				elif(file_name[-5:] == '.resx'):
+					webresource_type = 12
+
+				if(webresource_type == None):
+					message = 'File extension is not supported.'
+					sublime.message_dialog(message)
+					return
+
+				# Create new Web Resource
+				entity = {
+					'name': file_name,
+					'displayname': file_name,
+					'content': content_encoded,
+					'webresourcetype': str(webresource_type)
+				}
+
+				query_results = requests.post(url, headers=SolutionSettings.request_headers, data=json.dumps(entity))
+
+				if(SolutionSettings.debug == True):
+					pprint(vars(query_results))
+
+				if(query_results.status_code == 401):
+					CreateRequestHeaders(CreateToken())
+					UploadWebResource()
+					return
+				elif(query_results.status_code != 204):
+					message = 'Error - ' + json.loads(query_results._content.decode('UTF-8'))['error']['message']
+					sublime.message_dialog(message)
+					return
+
+				entityId = query_results.headers['OData-EntityId']
+				webresource_id = entityId[entityId.find('(')+1:entityId.find(')')]
+
+				date_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+				print('Web Resource Saved: ' + date_time)
+
+				# Publsh Web Resource
+				parameters = {
+					"ParameterXml": "<importexportxml>\
+						<webresources>\
+							<webresource>{" + webresource_id + "}</webresource>\
+						</webresources>\
+					</importexportxml>"
+				}
+
+				post_request = requests.post(SolutionSettings.web_api_url + '/PublishXml', headers=SolutionSettings.request_headers, data=json.dumps(parameters))
+
+				if(SolutionSettings.debug == True):
+					pprint(vars(post_request))
+
+				date_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+				print('Web Resource Published: ' + date_time)
+
+				# Add Web Resource to solution
+				# Metadata source: /api/data/v9.1/$metadata
+				# Component Types: https://docs.microsoft.com/en-us/dynamics365/customer-engagement/web-api/solutioncomponent?view=dynamics-ce-odata-9
+				url = SolutionSettings.web_api_url + '/AddSolutionComponent'
+
+				entity = {
+					'ComponentId': webresource_id,
+					'SolutionUniqueName': solution_name,
+					'ComponentType': 61,
+					'AddRequiredComponents': False
+				}
+
+				query_results = requests.post(url, headers=SolutionSettings.request_headers, data=json.dumps(entity))
+
+				if(SolutionSettings.debug == True):
+					pprint(vars(query_results))
+
+				if(query_results.status_code != 200):
+					message = 'Error - ' + json.loads(query_results._content.decode('UTF-8'))['error']['message']
+					sublime.message_dialog(message)
+					return
+
+				date_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+				sublime.active_window().status_message('Web Resource saved, published and added to solution: ' +  date_time)
+
+				SolutionSettings.selected_path = solution_path
+				DownloadWebResources()
+				return
+
+		webresource_id = SolutionSettings.json['webresource_data']['files'][path_info['name']]['webresource_id']
+		webresource_idunique = SolutionSettings.json['webresource_data']['files'][path_info['name']]['webresource_idunique']
 
 		server_webresource_info = GetWebResourceById(webresource_id)
 		if(server_webresource_info == False):
@@ -164,7 +273,7 @@ def UploadWebResource():
 			return
 
 		if(server_webresource_info['webresourceidunique'] != webresource_idunique):
-			message = 'There is a conflict between server and local file.\n\nThe server file is newer, modified on:\n' + server_webresource_info['modifiedon@OData.Community.Display.V1.FormattedValue'] + '.\n\nDo you really want to overwrite server file?'
+			message = 'There is a conflict between server and local file.\n\nServer file is newer, modified on:\n' + server_webresource_info['modifiedon@OData.Community.Display.V1.FormattedValue'] + '.\n\nDo you really want to overwrite server file?'
 			ret = sublime.ok_cancel_dialog(message)
 			if not ret:
 				return
@@ -217,7 +326,7 @@ def UploadWebResource():
 			sublime.message_dialog(message)
 			return
 
-		SolutionSettings.json['temporary_data']['files'][path_info['name']]['webresource_idunique'] = server_webresource_info['webresourceidunique']
+		SolutionSettings.json['webresource_data']['files'][path_info['name']]['webresource_idunique'] = server_webresource_info['webresourceidunique']
 		SaveSolutionSettings(SolutionSettings.json)
 
 		date_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -326,9 +435,9 @@ def DownloadWebResources():
 			with open(SolutionSettings.selected_path + '/' + file_name, 'wb') as f:
 				f.write(file_content.encode("utf-8"))
 
-			SolutionSettings.json['temporary_data']['files'][solution_name + '/' + file_name] = {}
-			SolutionSettings.json['temporary_data']['files'][solution_name + '/' + file_name]['webresource_id'] = webresource_id
-			SolutionSettings.json['temporary_data']['files'][solution_name + '/' + file_name]['webresource_idunique'] = webresource_idunique
+			SolutionSettings.json['webresource_data']['files'][solution_name + '/' + file_name] = {}
+			SolutionSettings.json['webresource_data']['files'][solution_name + '/' + file_name]['webresource_id'] = webresource_id
+			SolutionSettings.json['webresource_data']['files'][solution_name + '/' + file_name]['webresource_idunique'] = webresource_idunique
 		SaveSolutionSettings(SolutionSettings.json)
 
 		date_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -376,7 +485,7 @@ def CreateToken():
 		if(SolutionSettings.debug == True):
 			print(token)
 
-		SolutionSettings.json['temporary_data']['o365token'] = token
+		SolutionSettings.json['webresource_data']['o365token'] = token
 		SolutionSettings.token_id = token;
 		SaveSolutionSettings(SolutionSettings.json)
 
@@ -418,7 +527,7 @@ def FindSettingsFile(param_path = '', search_max_levels = 10):
 		else:
 			cur_path = SolutionSettings.selected_path + '/' + path_suffix + SolutionSettings.settings_filename
 		if(os.path.isfile(cur_path) == True):
-			return { 'path': os.path.dirname(cur_path), 'level': level }
+			return { 'path': os.path.dirname(cur_path), 'solution_name': os.path.dirname(cur_path), 'level': level }
 		else:
 			path_suffix = path_suffix + '../'
 	return { 'path': '', 'level': -1 }
@@ -479,7 +588,7 @@ def LoadSettings():
 	SolutionSettings.auto_open_browser_login = RetrieveSolutionSettings('preferences', 'auto_open_browser_login')
 
 	# Temporary
-	SolutionSettings.token_id = SolutionSettings.json['temporary_data']['o365token']
+	SolutionSettings.token_id = SolutionSettings.json['webresource_data']['o365token']
 
 def RetrieveSolutionSettings(settingsType, settingsName = None, exitIfMissing = True):
 	if settingsType in SolutionSettings.json:
@@ -529,14 +638,14 @@ def CreateSettingsFile(path = ''):
 		SolutionSettings.json['preferences']['retrieve_managed_solutions'] = False
 	if(RetrieveSolutionSettings('preferences', 'retrieve_web_resource_types', False) == None):
 		SolutionSettings.json['preferences']['retrieve_web_resource_types'] = '1,2,3,4,9,11,12'
-	if(RetrieveSolutionSettings('temporary_data', None, False) == None):
-		SolutionSettings.json['temporary_data'] = {}
-	if(RetrieveSolutionSettings('temporary_data', 'files', False) == None):
-		SolutionSettings.json['temporary_data']['files'] = {}
-	if(RetrieveSolutionSettings('temporary_data', 'o365token', False) == None):
-		SolutionSettings.json['temporary_data']['o365token'] = ''
-	if(RetrieveSolutionSettings('temporary_data', 'solution_id', False) == None):
-		SolutionSettings.json['temporary_data']['solution_id'] = ''
+	if(RetrieveSolutionSettings('webresource_data', None, False) == None):
+		SolutionSettings.json['webresource_data'] = {}
+	if(RetrieveSolutionSettings('webresource_data', 'files', False) == None):
+		SolutionSettings.json['webresource_data']['files'] = {}
+	if(RetrieveSolutionSettings('webresource_data', 'solutions', False) == None):
+		SolutionSettings.json['webresource_data']['solutions'] = {}
+	if(RetrieveSolutionSettings('webresource_data', 'o365token', False) == None):
+		SolutionSettings.json['webresource_data']['o365token'] = ''
 
 	SaveSolutionSettings(SolutionSettings.json)
 
@@ -684,9 +793,5 @@ class RetrieveTenantIdSideBarCommand(sublime_plugin.WindowCommand):
 	def is_visible(self):
 		return False
 
-#self.view.window().show_quick_panel(['messages', 'messages2'], self.on_done1, sublime.MONOSPACE_FONT)
-
-#self.view.window().show_input_panel("Please enter the directory name:", "something", self.on_done1, None, None)
-
-#self.view.window().status_message('Sent to server')
-
+# Edit Web Resource
+# https://...//main.aspx?id=...&etc=9333&pagetype=webresourceedit

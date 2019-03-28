@@ -5,11 +5,15 @@
 	    "children": [
 	    	{ "caption" : "Upload Web Resources", "command" : "upload_web_resource_side_bar", "args": {"files": []} },
 	    	{ "caption" : "Download Web Resources", "command" : "download_web_resources_side_bar", "args": {"dirs": []} },
-	    	{ "caption" : "Retrieve CRM Solutions", "command" : "retrieve_solutions_side_bar", "args": {"dirs": []} },
+	    	{ "caption" : "Retrieve CRM Solution", "command" : "retrieve_solutions_side_bar", "args": {"dirs": []} },
 	    	{ "caption": "-" },
 	    	{ "caption" : "Retrieve Tenant ID", "command" : "retrieve_tenant_id_side_bar", "args": {"dirs": []} },
 	    	{ "caption": "-" },
-	    	{ "caption" : "Create/Update Settings File", "command" : "create_settings_file_side_bar", "args": {"dirs": []} }
+	    	{ "caption" : "Create/Update Settings File", "command" : "create_settings_file_side_bar", "args": {"dirs": []} },
+
+		    //{ "caption": "Side Bar Test Dirs",  "command": "side_bar_test_dirs",  "args": {"dirs": []} },
+		    //{ "caption": "Side Bar Test Paths", "command": "side_bar_test_paths", "args": {"paths": []} },
+		    //{ "caption": "Side Bar test Files", "command": "side_bar_test_files", "args": {"files": []} }
 		]
 	}
 ]
